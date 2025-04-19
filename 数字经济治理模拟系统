@@ -1,0 +1,172 @@
+# -*- coding: utf-8 -*-
+"""
+数字经济治理模拟系统 - 核心模块
+Copyright (C) 2025 张詹俊
+
+如需学术引用，请使用：
+Zhang, Z. (2025). Digital Economy Governance Simulator (Version 2.0) [Computer software]. 
+GitHub. https://github.com/zhangzhanjun/digital-economy-simulator
+
+This work is licensed under the MIT License.
+See LICENSE file for details.
+"""
+
+import datetime
+import threading
+from typing import List, Dict, Optional, Tuple
+import hashlib
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
+
+# === 配置模块 ===
+class TaxConfig:
+    """税率配置"""
+    VIRTUAL_ECONOMY_RATE = 0.15  # 虚拟经济税率
+    PHYSICAL_ECONOMY_RATE = 0.10  # 实体经济税率
+    TECH_COMPANY_CHINA_RATE = 0.12  # 在华科技企业税率
+    TECH_COMPANY_FOREIGN_RATE = 0.05  # 境外科技企业税率
+
+class TechDevelopmentConfig:
+    """技术发展路线配置（基于十四五规划）"""
+    ROADMAP = {
+        'short_term': ['Chiplet', 'DUV多重曝光'],
+        'mid_term': ['RISC-V', 'MUSA GPU'],
+        'long_term': ['光子芯片']
+    }
+    BUDGET_ALLOCATION = {
+        'Chiplet': 0.4,  # 先进封装技术
+        'DUV多重曝光': 0.3,  # 成熟制程优化
+        'RISC-V': 0.2,  # 自主指令集
+        'MUSA GPU': 0.1  # 国产GPU架构
+    }
+
+# === 数据模型 ===
+@dataclass
+class Transaction:
+    """交易数据模型（符合央行数字货币规范）"""
+    amount: float  # 交易金额（单位：元）
+    is_virtual: bool = False  # 是否虚拟经济交易
+    timestamp: datetime.datetime = datetime.datetime.now()  # 交易时间戳
+
+# === 核心系统 ===
+class DigitalYuan:
+    """央行数字货币系统（DCEP实现）"""
+    __slots__ = ['_supply', '_ledger']
+    
+    def __init__(self):
+        self._supply = 0  # 货币供应量
+        self._ledger: List[Tuple[str, float, datetime.datetime]] = []  # 交易账本
+    
+    def issue(self, amount: float, recipient: str) -> None:
+        """定向货币投放（M0发行）"""
+        if amount <= 0:
+            raise ValueError("发行金额必须为正数")
+        self._supply += amount
+        self._ledger.append((
+            recipient, 
+            amount, 
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
+    
+    def collect_tax(self, tx: Transaction) -> float:
+        """智能征税（含虚拟经济识别）"""
+        rate = TaxConfig.VIRTUAL_ECONOMY_RATE if tx.is_virtual else TaxConfig.PHYSICAL_ECONOMY_RATE
+        tax_amount = tx.amount * rate
+        self._ledger.append((
+            "国家税务总局", 
+            tax_amount, 
+            tx.timestamp
+        ))
+        return tax_amount
+    
+    @property
+    def total_supply(self) -> float:
+        """获取当前货币供应总量（M0）"""
+        return self._supply
+
+class TechDevelopment:
+    """技术发展规划模型（支持动态调整）"""
+    def __init__(self):
+        self.roadmap = TechDevelopmentConfig.ROADMAP
+        self.budget_allocation = TechDevelopmentConfig.BUDGET_ALLOCATION
+    
+    def allocate(self, total_budget: float) -> Dict[str, float]:
+        """政策资金分配（带参数校验）"""
+        if total_budget <= 0:
+            raise ValueError("预算总额必须为正数")
+        
+        return {
+            tech: round(alloc * total_budget, 2)  # 保留两位小数
+            for tech, alloc in self.budget_allocation.items()
+        }
+
+# === 企业模型 ===
+class Capital(ABC):
+    """资本抽象基类（符合OECD税收准则）"""
+    def __init__(self, name: str):
+        self.name = name
+        self._compliance = False  # 税务合规状态
+    
+    @abstractmethod
+    def calculate_tax(self, tx: Transaction) -> float:
+        """计算应纳税额（需子类实现）"""
+        pass
+
+class TechCompany(Capital):
+    """科技企业模型（含中国市场策略）"""
+    def __init__(self, name: str, has_china_market: bool = False):
+        super().__init__(name)
+        self._has_china_market = has_china_market  # 是否在中国运营
+    
+    def calculate_tax(self, tx: Transaction) -> float:
+        """差异化税率策略"""
+        rate = (TaxConfig.TECH_COMPANY_CHINA_RATE if self._has_china_market
+                else TaxConfig.TECH_COMPANY_FOREIGN_RATE)
+        return tx.amount * rate
+
+# === 技术对抗模块 ===
+class TechSanctionChecker:
+    """技术封锁检查器（线程安全实现）"""
+    def __init__(self):
+        self._lock = threading.RLock()  # 可重入锁
+        self._dependency_map = {
+            'EUV': ['ASML', 'Zeiss'],  # 光刻技术依赖
+            'GPGPU': ['CUDA', 'TSMC']  # GPU技术依赖
+        }
+    
+    def is_sanctioned(self, tech: str) -> bool:
+        """检查技术是否被封锁（含依赖分析）"""
+        with self._lock:
+            dependencies = self._dependency_map.get(tech, [])
+            return any(not self._check_dependency(dep) for dep in dependencies)
+    
+    def _check_dependency(self, dependency: str) -> bool:
+        """模拟技术依赖检查（可扩展为API调用）"""
+        # 实际应用中应接入供应链数据库
+        return False  # 默认返回被封锁状态
+
+# === 示例使用 ===
+if __name__ == "__main__":
+    print("""\
+====================================
+  数字经济治理模拟系统 v2.0
+  开发者：张詹俊 (2025)
+  学术引用：
+  Zhang, Z. (2025). Digital Economy 
+  Governance Simulator. GitHub.
+====================================""")
+
+    # 初始化系统组件
+    dy = DigitalYuan()
+    tech_policy = TechDevelopment()
+    domestic_company = TechCompany("华为云", has_china_market=True)
+    foreign_company = TechCompany("NVIDIA", has_china_market=False)
+    sanction_checker = TechSanctionChecker()
+
+    # 模拟货币发行
+    dy.issue(10_000_000_000, "商业银行A")
+    print(f"\n当前货币供应量: ¥{dy.total_supply:,.2f}")
+
+    # 模拟征税场景
+    scenarios = [
+        ("国内虚拟交易", Transaction(1_000_000,is_virtual=True)),        ("跨境实体交易", Transaction(2_000_000, is_virtual=False))    ]        for desc, tx in scenarios:        print(f"\n场景: {desc}")        print(f"- 央行征税: ¥{dy.collect_tax(tx):,.2f}")        print(f"- 国内企业税: ¥{domestic_company.calculate_tax(tx):,.2f}")        print(f"- 外企税: ¥{foreign_company.calculate_tax(tx):,.2f}")    # 技术发展演示    print("\n2025年技术投资分配:")    for tech, amount in tech_policy.allocate(500_000_000_000).items():        print(f"- {tech:<10} ¥{amount/1e8:.2f}亿")    # 技术封锁检查    print("\n技术封锁状态:")    for tech in ['EUV', 'GPGPU']:        status = "封锁中" if sanction_checker.is_sanctioned(tech) else "可用"        print(f"- {tech}: {status}")# === 免责声明 ==="""注：本系统为学术研究用途，所涉企业名称和技术名词均属其合法所有者，与实际政策或商业行为无关。技术配置参数参考公开政策文件，具体实施请咨询专业人士。"""
